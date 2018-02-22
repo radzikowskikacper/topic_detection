@@ -1,42 +1,37 @@
 from flask import Flask
 from flask import request
 from flask import jsonify
-from brandbastion.core.similarities import doc2vec, tfidf
+from brandbastion.core.similarities import doc2vec
 from brandbastion.core.data import loader
-import os
 
 
 app = Flask(__name__)
 
 print("Loading models")
-models = {}#{'tfidf' : tfidf.load_model('tfidf.model'), 'doc2vec' : doc2vec.load_model('doc2vec.model')}
-dataset = loader.load_from_file('IG-comments.txt')
-#doc2vec.create_embeddings(dataset, 'model.model10')
-models['doc2vec'] = doc2vec.load_model('model.model10')
-doc2vec.get_similar_comments("I love hamburgers", models['doc2vec'], dataset)
+models = {}
+models['doc2vec'] = doc2vec.load_model('model.model')
 print('Done')
+
+@app.route('/transfer_to_db')
+def transfer_to_db():
+    loader.save_to_database('IG-comments.txt')
 
 @app.route('/recalculate')
 def recalculate():
-    pass
+    doc2vec.create_embeddings(loader.load_from_database(), 'model.model')
+    models['doc2vec'] = doc2vec.load_model('model.model')
 
-@app.route('/data')
+@app.route('/data', methods = ['POST'])
 def data():
-    pass
+    loader.add_to_db(request.get('comment'))
 
-@app.route('/visualize')
-def visualize():
-    pass
-
-@app.route('/similarity/<string:model>', methods=['GET'])
-def predict(model):
+@app.route('/similarity/<string:model>/<int:number>', methods=['GET'])
+def predict(model, number):
     if model == 'doc2vec':
-        similar_comments = doc2vec.get_similar_comments(request.args.get('sample'), models['doc2vec'], dataset)
-
-        response = jsonify({'sample' : request.args.get('sample'), 'results' : similar_comments})
+        similar_comments = doc2vec.get_similar_comments(request.args.get('sentence'), models['doc2vec'], number)
+        response = jsonify({'sentence' : request.args.get('sentence'), 'results' : similar_comments})
         response.status_code = 200
         return response
 
-if __name__ == "__main__":
-    pass
-    #app.run(host='0.0.0.0', port=9999)
+def start_server():
+    app.run(host='0.0.0.0', port=9999)

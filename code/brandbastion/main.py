@@ -1,8 +1,4 @@
-from brandbastion.core.data import loader
-
-from brandbastion.core.visualize import tsne
-
+from brandbastion.web.back import runweb
 
 if __name__ == '__main__':
-    #tsne.test()
-    pass
+    runweb.start_server()
